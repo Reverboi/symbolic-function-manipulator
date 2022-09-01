@@ -235,52 +235,41 @@ Node* strton(char* s, int m){
 	if(m<1){
 		goto err;
 		}
-
 	if (s[0]==' '){
 		return strton(&s[1],m-1);
 		}
-
 	if (s[m-1]==' '){
 		return strton(s,m-1);
 		}
-
 	if((s[0]=='(')&&(s[m-1]==')')){
 		return strton(&s[1],m-2);
 		}
-
 	if((s[0]=='x')&&(m==1)){
 		return new Node('x',NAN);
 		}
-
 	j=checkfor(s,m,'+');
 	if(j!=(-1)){
 		return new Node('+',strton(s,j),strton(&s[j+1],m-j-1));
 		}
-
 	j=checkfor(s,m,'-');
 	if(j>0){
 		return new Node('+',strton(s,j),strton(&s[j],m-j));
 		}
-
 	j=checkfor(s,m,'*');
 	if(j!=-1){
 		return new Node('*',strton(s,j),strton(&s[j+1],m-j-1));
 		}
-
 	j=checkfor(s,m,'/');
 	if(j!=-1){
 		return new Node('*',strton(s,j),new Node('i',strton(&s[j+1],m-j-1)));
 		}
-
 	j=checkfor(s,m,'^');
 	if(j!=-1){
 		return new Node('p',strton(s,j),strton(&s[j+1],m-j-1));
 		}
-
 	if(s[0]=='-'){
 		return new Node('-',strton(&s[1],m-1));
 		}
-
 	if((ctrl-s)==m*sizeof(char)){
 		cout<<pippo<<endl;
 		return new Node('n',pippo);
@@ -289,7 +278,6 @@ Node* strton(char* s, int m){
 	if(m<6){
 		goto err;
 		}
-
 	if((s[0]=='s')&&(s[1]=='i')&&(s[2]=='n')){
 		return new Node('s',strton(&s[4],m-5));
 		}
@@ -422,7 +410,7 @@ void Node::text(){
 			cout<<value;
 			break;
 		case 'x':
-			cout<<"x";
+			cout<<'x';
 			break;
 		case '-':
 			cout<<"-";
