@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     	printf("Example: %s 'sin(x)' \n", argv[0]);
     	exit(EXIT_FAILURE);
 		}
-	Node* f,* g;
+	Node* f,* g=NULL;
 	string in;
 	char ctrl;
 	if (argc==2) f = strton(argv[1],strlen(argv[1]));
@@ -20,8 +20,9 @@ int main(int argc, char** argv) {
 		cin>>in;
 		f = strton(const_cast<char *>(in.c_str()),in.size());
 		}
-	cout<<"Input an action (enter h for help): ";
 	while(1){
+		start:
+		cout<<"Input: ";
 		cin>>in;
 		switch(in[0]){
 			case 'i':
@@ -34,11 +35,7 @@ int main(int argc, char** argv) {
 				g=f->clean();
 				break;
 			case 'd':
-				for(int j=(in[1]==NULL?1:in[1]);j>0;j--){
-					g=f->set_ad();
-					delete f;
-					f=g;
-					}
+				g=f->set_ad();
 				break;
 			case 'e':
 				double r;
@@ -47,12 +44,14 @@ int main(int argc, char** argv) {
 				cout<<"f("<<r<<")="<<f->eval(r)<<endl;
 				continue;
 			case 'q':
+				cout<<f<<endl<<f->arg[0]<<endl;
 				delete f;
 				return 0;
 			default:
 			cout<<"Press i to insert a new function"<<endl<<
 			"      s to simplify"<<endl<<"      d to derive"<<endl<<
-			"      e to evaluate"<<endl<<"      q to exit";
+			"      e to evaluate"<<endl<<"      q to exit"<<endl;
+			goto start;
 			}
 		delete f;
 		f=g;

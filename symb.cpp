@@ -5,228 +5,280 @@
 using namespace std;
 
 Node :: Node (){//constructor
-	type=0;
-	value=NAN;
-	arg1=NULL;
-	arg2=NULL;
+	ord=0;
+	arg=NULL;
 	}	
-		
+	
+Node :: Node(Node** a,int b){
+	arg=a;
+	ord=b;
+	}
+
 Node :: ~Node(){//deconstructor
-	if(arg1!=NULL) delete arg1;
-	if(arg2!=NULL) delete arg2;
-	}
-	
-Node :: Node(char a){//constructor
-	type=a;
-	value=NAN;
-	arg1=NULL;
-	arg2=NULL;
+	for(int i=0;i<ord;i++){
+		if(arg[i]!=NULL) delete arg[i];
+		}
+	free(arg);
 	}
 
-Node :: Node(char a,double b){//constructor
-	type=a;
+Number :: Number(double b){//constructor
 	value=b;
-	arg1=NULL;
-	arg2=NULL;
 	}
 
-Node :: Node(char a,Node* b){//constructor
-	type=a;
-	value=NAN;
-	arg1=b;
-	arg2=NULL;
+Node :: Node(Node* b){//constructor
+	ord=1;
+	arg=(Node**)malloc(ord * sizeof(Node*));
+	arg[0]=b;
+	}
+
+Node :: Node(Node* b,Node* c){//constructor
+	ord=2;
+	arg=(Node**)malloc(ord * sizeof(Node*));
+	arg[0]=b;
+	arg[1]=c;
 	}
 	
-Node :: Node(char a,Node* b,Node* c){//constructor
-	type=a;
-	value=NAN;
-	arg1=b;
-	arg2=c;
+Node* Sum :: copy(){
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++) a[i]=arg[i]->copy();
+	return new Sum(a,ord);
 	}
-	
-Node :: Node(char a, double x, Node* b, Node* c){//constructor
-	type=a;
-	value=x;
-	arg1=b;
-	arg2=c;
+Node* Minus :: copy(){return new Minus(arg[0]->copy());}
+Node* Exp:: copy(){return new Exp(arg[0]->copy());}
+Node* Cos:: copy(){return new Cos(arg[0]->copy());}
+Node* Sin:: copy(){return new Sin(arg[0]->copy());}
+Node* Log:: copy(){return new Log(arg[0]->copy());}
+Node* Pow:: copy(){return new Pow(arg[0]->copy(),arg[1]->copy());}
+Node* X:: copy(){return new X();}
+Node* Prod :: copy(){
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++) a[i]=arg[i]->copy();
+	return new Prod(a,ord);
 	}
-	
-Node :: Node(Node* s){//copy constructor
-	if(s==NULL){
-		cout<<"fucking hell, who passed a null pointer to the copy-constructor?"<<endl;
-		exit(1);
-		}
-	type=s->type;
-	value=s->value;
-	arg1=NULL;
-	arg2=NULL;
-	if (s->arg1!=NULL) arg1= new Node(s->arg1);
-	if (s->arg2!=NULL) arg2= new Node(s->arg2);
-	}
-	
-Node :: Node (Node* s, double p){//shift constructor usato nel metodo del rapp incrementale
-	if(s->type!='x'){
-		type=s->type;
-		value=s->value;
-		arg1=NULL;
-		arg2=NULL;
-		if (s->arg1!=NULL) arg1= new Node(s->arg1,p);
-		if (s->arg2!=NULL) arg2= new Node(s->arg2,p);
-		}
-	else{
-		type='+';
-		value=NAN;
-		arg1= new Node('x');
-		arg2= new Node('n',p);
-		}
-	}
-	
-int Node::size(){
-	int a=1;
-	if(arg1!=NULL){
-		a=a+arg1->size();
-		}
-	if(arg2!=NULL){
-		a=a+arg2->size();
-		}
-	return a;
-	}
-	
-Node* Node::clean(){
-	Node* cl=new Node(type,value,arg1==NULL?NULL:arg1->clean(), arg2==NULL?NULL:arg2->clean());
+Node* Number::copy(){return new Number(value);}
 	/*
-	if(arg1!=NULL){
-		cl->arg1=arg1->clean();
+Node* Node :: shift_copy(double b){
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++) a[i]=arg[i]->shift_copy(b);
+	return new Node(a,ord);//will this call the right derived constructor?
+	}
+	
+Node* X::shift_copy(double b){return new Sum(copy(),new Number(b));}
+*/
+Node* Sum :: omit(int b){
+	Node** a=(Node**)malloc((ord-1)*sizeof(Node*));
+	int i=0;
+	for(int j=0;j<ord;j++){
+		if(j!=b){
+			a[i]=arg[j]->copy();
+			}
+		else i--;
+		i++;
 		}
-	if(arg2!=NULL){
-		cl->arg2=arg2->clean();
+	if(ord==2) return a[0]->copy();
+	else return new Sum(a,ord-1);
+	}
+	
+Node* Prod::omit(int b){
+	Node** a=(Node**)malloc((ord-1)*sizeof(Node*));
+	int i=0;
+	for(int j=0;j<ord;j++){
+		if(j!=b){
+			a[i]=arg[j]->copy();
+			}
+		else i--;
+		i++;
 		}
-		*/
-	Node* s=NULL;//swap
-	if (cl->arg1!=NULL){//se non dipende da x posso ridurre un sotto albero ad un solo numero
-		if (cl->arg1->type=='n'){
-			if (cl->arg2!=NULL){
-				if(cl->arg2->type=='n'){
-					s=new Node('n',cl->eval(NAN));
-					goto flag1;
-					}
-				}
-			else{
-				s=new Node('n',cl->eval(NAN));
-				goto flag1;
+	if(ord==2) return a[0]->copy();
+	else return new Prod(a,ord-1);
+	}
+int Node::size(){
+	int r=1;
+	for(int i=0;i<ord;i++) r=r+arg[1]->size();
+	return r;
+	}
+	
+bool Node::just_numbers(){
+	for(int i=0;i<ord;i++){
+		if(typeid(*arg[i]).name()!=typeid(Number).name()) return 0;
+		}
+	return 1;
+	}
+
+Node* Sum::fuse(Node* a){
+	int o=ord+a->ord;
+	Node** b=(Node**)malloc(o*sizeof(Node*));
+	for(int i=0;i<ord;i++) b[i]=arg[i]->copy();
+	for(int i=0;i<a->ord;i++) b[i]=a->arg[i+ord]->copy();
+	return new Sum(b,o);
+	}
+
+Node* Prod::fuse(Node* a){
+	int o=ord+a->ord;
+	Node** b=(Node**)malloc(o*sizeof(Node*));
+	for(int i=0;i<ord;i++) b[i]=arg[i]->copy();
+	for(int i=0;i<a->ord;i++) b[i+ord]=a->arg[i]->copy();
+	return new Prod(b,o);
+	}
+
+Node* Sum::clean(){
+	Node** c=(Node**)malloc(sizeof(Node*)*ord);
+	for(int i=0;i<ord;i++){
+		c[i]=arg[i]->clean();
+		}
+	Node* cl=new Sum(c,ord);
+	if(cl->just_numbers()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	else {for(int i=0;i<cl->ord;i++){
+		if(typeid(*(cl->arg[i])).name()==typeid(Number).name()){
+			if((static_cast<Number*>(cl->arg[i]))->value==0.0){
+				Node* s=cl->omit(i);
+				delete cl;
+				cl=s;
+				i--;
 				}
 			}
 		}
-	switch (cl->type){
-		case'+':
-			if(cl->arg1->type=='-'){
-				s=cl->arg1;
-				cl->arg1=cl->arg2;
-				cl->arg2=s;
-				s=NULL;
+		int k=cl->ord;
+		for(int i=0;i<k;i++){
+			if(typeid(cl->arg[i])==typeid(Sum*)){
+				Node* s=cl->fuse(cl->arg[i]);
+				delete cl;
+				cl=s;
 				}
-			if((cl->arg1->type=='n')&&(cl->arg1->value==0.0)){
-				s=new Node(cl->arg2);
-				break;
-				}
-			if((cl->arg2->type=='n')&&(cl->arg2->value==0.0)){
-				s=new Node(cl->arg1);
-				break;
-				}
-			if(cl->arg1->compare (cl->arg2)){
-				s=new Node('*',new Node(cl->arg1),new Node('n',2.0));
-				break;
-				}
-			if(((cl->arg1->type=='-')&&(cl->arg1->arg1->compare(cl->arg2)))||((cl->arg2->type=='-')&&(cl->arg2->arg1->compare(cl->arg1)))){
-				s=new Node('n',0.0);
-				break;
-				}
-			if((cl->arg1->type=='-')&&(cl->arg2->type=='-')){//anzi non dovri farlo anche per moltiplicativi arbitrari?
-				s=new Node('-',new Node('+',new Node(cl->arg1->arg1),new Node(cl->arg2->arg1)));
-				break;
-				}
-			goto flag0;
-		case '*':
-			if(((cl->arg1->type=='n')&&(cl->arg1->value==0.0))||((cl->arg2->type=='n')&&(cl->arg2->value==0.0))){
-				s=new Node('n',0.0);
-				break;
-				}
-			if((cl->arg1->type=='n')&&(cl->arg1->value==1.0)){
-				s=new Node(cl->arg2);
-				break;
-				}
-			if((cl->arg2->type=='n')&&(cl->arg2->value==1.0)){
-				s=new Node(cl->arg1);
-				break;
-				}
-			if((cl->arg1->type=='-')&&(cl->arg2->type=='-')){
-				s=new Node('*',new Node(cl->arg1->arg1),new Node(cl->arg2->arg1));
-				break;
-				}
-			if(cl->arg1->compare(cl->arg2)){
-				s=new Node('p',new Node(cl->arg1),new Node('n',2.0));
-				break;
-				}
-			if(((cl->arg1->type=='i')&&(cl->arg1->arg1->compare(cl->arg2)))||
-				((cl->arg2->type=='i')&&(cl->arg2->arg1->compare(cl->arg1)))){
-				s=new Node('n',1.0);
-				break;
-				}
-			if((cl->arg1->type=='p')&&(cl->arg1->arg1->compare(cl->arg2))){
-				s=new Node(
-					'p',new Node(
-						cl->arg1->arg1),new Node(
-							'+',new Node(
-								cl->arg1->arg2),new Node(
-									'n',1.0)));
-				break;
-				}
-			if((cl->arg2->type=='p')&&(cl->arg2->arg1->compare(cl->arg1))){
-				s=new Node('p',new Node(cl->arg2->arg1),new Node('+',new Node(cl->arg2->arg2),new Node('n',1.0)));
-				break;
-				}
-			if((cl->arg1->type=='p')&&(cl->arg2->type=='p')&&(cl->arg1->arg1->compare(cl->arg2->arg1))){
-				s=new Node('p',new Node(cl->arg1->arg1),new Node('+',new Node(cl->arg1->arg2),new Node(cl->arg2->arg2)));
-				break;
-				}
-			goto flag0;
-		case '-':
-			if(cl->arg1->type=='-'){
-				s=new Node(cl->arg1->arg1);
-				break;
-				}
-			goto flag0;
-		case 'p':
-			if((cl->arg2->type=='n')&&(cl->arg2->value==1.0)){
-				s=new Node(cl->arg1);
-				break;
-				}
-			if(cl->arg1->type=='p'){
-				s=new Node('p',new Node(cl->arg1->arg1),new Node('*', new Node(cl->arg1->arg2),new Node(cl->arg2)));
-				break;
-				}
-			goto flag0;
-		case 'e':
-			if(cl->arg1->type=='l'){
-				s=new Node(cl->arg1->arg1);
-				break;
-				}
-			goto flag0;
-		case 'l':
-			if(cl->arg1->type=='e'){
-				s=new Node(cl->arg1->arg1);
-				break;
-				}
-			goto flag0;
-		default:
-			flag0:
-			s=new Node(cl);
+			}
 		}
-	flag1:
-	delete cl;
-	return s;
+	return cl;
+	}
+Node* Prod::clean(){
+	Node** c=(Node**)malloc(sizeof(Node*)*ord);
+	for(int i=0;i<ord;i++){
+		c[i]=arg[i]->clean();
+		}
+	Node* cl=new Prod(c,ord);
+	if(cl->just_numbers()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	else {for(int i=0;i<cl->ord;i++){
+		if(typeid(*(cl->arg[i])).name()==typeid(Number).name()){
+			if((static_cast<Number*>(cl->arg[i]))->value==0.0){
+				Node* s=new Number(0.0);
+				delete cl;
+				cl=s;
+				break;
+				}
+			if((static_cast<Number*>(cl->arg[i]))->value==1.0){
+				Node* s=cl->omit(i);
+				delete cl;
+				cl=s;
+				i--;
+				}
+			}
+		}
+		int k=cl->ord;
+		for(int i=0;i<k;i++){
+			if(typeid(*(cl->arg[i])).name()==typeid(Prod).name()){
+				Node* s=cl->fuse(cl->arg[i]);
+				delete cl;
+				cl=s;
+				}
+			}
+		}
+	return cl;
+	}
+Node* Minus::clean(){
+	Node* cl=new Minus(arg[0]->clean());
+	if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){		//-0 = 0
+		if((static_cast<Number*>(cl->arg[0]))->value==0.0){
+			Node* s=new Number(0.0);
+			delete cl;
+			cl=s;
+			}
+		}
+	else if(typeid(*(cl->arg[0])).name()==typeid(Minus).name()){	//-(-())=()
+		Node* s=cl->arg[0]->arg[0]->copy();
+		delete cl;
+		cl=s;
+		}
+	return cl;
+	}
+
+Node* Cos::clean(){
+	Node* cl=new Cos(arg[0]->clean());
+	if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	return cl;
 	}
 	
+Node* Sin::clean(){
+	Node* cl=new Sin(arg[0]->clean());
+	if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	return cl;
+	}
+
+Node* Exp::clean(){
+	Node* cl=new Exp(arg[0]->clean());
+	if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	return cl;
+	}
+	
+Node* Pow::clean(){
+	Node* cl=new Pow(arg[0]->clean(),arg[1]->clean());
+	if(cl->just_numbers()){
+		Node* s = new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	if(typeid(*(cl->arg[1])).name()==typeid(Number).name()){
+		if((static_cast<Number*>(cl->arg[1]))->value==0.0){
+			if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
+				goto flag;
+				}
+			else if((static_cast<Number*>(cl->arg[0]))->value!=0.0){
+				flag:
+				Node* s = new Number(1.0);
+				delete cl;
+				cl=s;
+				}
+			}
+		}
+	return cl;
+	}
+
+Node* Log::clean(){
+	Node* cl=new Log(arg[0]->clean());
+	if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
+		Node* s=new Number(cl->eval(NAN));
+		delete cl;
+		cl=s;
+		}
+	else if(typeid(*(cl->arg[0])).name()==typeid(Exp).name()){
+		Node* s=cl->arg[0]->arg[0]->copy();
+		delete cl;
+		cl=s;
+		}
+	return cl;
+	}
+	
+Node* X::clean(){return copy();} 
+Node* Number::clean(){return copy();}
+
 Node* strton(char* s, int m){
 	char* ctrl;
 	double pippo=strtod(s,&ctrl);
@@ -245,53 +297,58 @@ Node* strton(char* s, int m){
 		return strton(&s[1],m-2);
 		}
 	if((s[0]=='x')&&(m==1)){
-		return new Node('x',NAN);
+		return new X();
 		}
+	
 	j=checkfor(s,m,'+');
 	if(j!=(-1)){
-		return new Node('+',strton(s,j),strton(&s[j+1],m-j-1));
+		return new Sum(strton(s,j),strton(&s[j+1],m-j-1));
 		}
 	j=checkfor(s,m,'-');
 	if(j>0){
-		return new Node('+',strton(s,j),strton(&s[j],m-j));
+		return new Sum(strton(s,j),strton(&s[j],m-j));
 		}
 	j=checkfor(s,m,'*');
 	if(j!=-1){
-		return new Node('*',strton(s,j),strton(&s[j+1],m-j-1));
+		return new Prod(strton(s,j),strton(&s[j+1],m-j-1));
 		}
 	j=checkfor(s,m,'/');
 	if(j!=-1){
-		return new Node('*',strton(s,j),new Node('i',strton(&s[j+1],m-j-1)));
+		return new Prod(strton(s,j),new Pow(strton(&s[j+1],m-j-1),new Minus(new Number(1.0))));
 		}
 	j=checkfor(s,m,'^');
 	if(j!=-1){
-		return new Node('p',strton(s,j),strton(&s[j+1],m-j-1));
+		return new Pow(strton(s,j),strton(&s[j+1],m-j-1));
 		}
 	if(s[0]=='-'){
-		return new Node('-',strton(&s[1],m-1));
+		return new Minus(strton(&s[1],m-1));
 		}
 	if((ctrl-s)==m*sizeof(char)){
 		cout<<pippo<<endl;
-		return new Node('n',pippo);
+		return new Number(pippo);
 		}
 	
 	if(m<6){
 		goto err;
 		}
 	if((s[0]=='s')&&(s[1]=='i')&&(s[2]=='n')){
-		return new Node('s',strton(&s[4],m-5));
+		/*
+		Node* b=strton(&s[4],m-5);
+		Sin* c= new Sin(b);
+		return c;*/
+		return new Sin(strton(&s[4],m-5));
 		}
 	
 	if((s[0]=='c')&&(s[1]=='o')&&(s[2]=='s')){
-		return new Node('c',strton(&s[4],m-5));
+		return new Cos(strton(&s[4],m-5));
 		}
 	
 	if((s[0]=='e')&&(s[1]=='x')&&(s[2]=='p')){
-		return new Node('e',strton(&s[4],m-5));
+		return new Exp(strton(&s[4],m-5));
 		}
 	
 	if((s[0]=='l')&&(s[1]=='o')&&(s[2]=='g')){
-		return new Node('l',strton(&s[4],m-5));
+		return new Log(strton(&s[4],m-5));
 		}
 		
 	if(m<8){
@@ -303,221 +360,134 @@ Node* strton(char* s, int m){
 		if((j<1)||(j>m-7)){
 			goto err;
 			}
-		return new Node('p',strton(&s[4],j),strton(&s[j+5],m-6-j));
+		return new Pow(strton(&s[4],j),strton(&s[j+5],m-6-j));
 	}
 	err:
 	cout << "Syntax Error" << endl; //learn about throwing exeptions
 	return NULL;
 }
-Node* Node::set_ad(){
-	Node* ad=NULL;
-	switch (type){
-		case 'n':
-			ad = new Node('n',0.0);
-			break;
-		case 'x':
-			ad = new Node('n',1.0);
-			break;
-		case '-':
-			ad = new Node('-');
-			ad->arg1 = arg1->set_ad();
-			break;
-		case '+':
-			ad = new Node('+');
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = arg2->set_ad();
-			break;
-		case '*':
-			ad = new Node('+',NAN);
-			ad->arg1 = new Node('*');
-			ad->arg2 = new Node('*');
-			(ad->arg1)->arg1=new Node(arg1);
-			(ad->arg1)->arg2=arg2->set_ad();
-			(ad->arg2)->arg1= new Node(arg2);
-			(ad->arg2)->arg2=arg1->set_ad();
-			break;
-		case 'i':
-			ad = new Node('*');
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = new Node('-');
-			(ad->arg2)->arg1 = new Node('i');
-			((ad->arg2)->arg1)->arg1 = new Node('p');
-			(((ad->arg2)->arg1)->arg1)->arg1 = new Node(arg1);
-			(((ad->arg2)->arg1)->arg1)->arg2 = new Node('n',2.0);
-			break;
-		case 'e':
-			ad = new Node('*',NAN);
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = new Node(this);
-			break;
-		case 's':
-			ad = new Node('*',NAN);
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = new Node('c',NAN);
-			(ad->arg2)->arg1 = new Node(arg1);
-			break;
-		case 'c':
-			ad = new Node('*',NAN);
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = new Node('-',NAN);
-			(ad->arg2)->arg1 = new Node('s',NAN);
-			((ad->arg2)->arg1)->arg1 = new Node(arg1);
-			break;
-		case 'l':
-			ad = new Node('*',NAN);
-			ad->arg1 = arg1->set_ad();
-			ad->arg2 = new Node('i',NAN);
-			(ad->arg2)->arg1 = new Node(arg1);
-			break;
-		case 'p':
-			ad = new Node('*');
-			ad->arg1 = new Node(this);
-			ad->arg2 = new Node('+');
-			ad->arg2->arg1 = new Node('*');
-			ad->arg2->arg1->arg1 = new Node(arg2);
-			ad->arg2->arg1->arg2 = new Node('*');
-			ad->arg2->arg1->arg2->arg1 = arg1->set_ad();
-			ad->arg2->arg1->arg2->arg2 = new Node('i');
-			ad->arg2->arg1->arg2->arg2->arg1 = new Node(arg1);
-			ad->arg2->arg2 = new Node('*');
-			ad->arg2->arg2->arg1 = new Node('l');
-			ad->arg2->arg2->arg1->arg1 = new Node(arg1);
-			ad->arg2->arg2->arg2 = arg2->set_ad();
-		default:;
-	}
-	if(ad==NULL){
-			cout<<"You tried to derive a bad Node"<<endl;
-			exit(1);
-			}
-		return ad;
-	}
 
-Node* Node::set_fd(){
-	Node* fd;
-	fd = new Node('*',NAN);
-	fd->arg1= new Node('+',NAN);
-	fd->arg2= new Node('i',NAN);
-	fd->arg2->arg1 = new Node('n',h);
-	fd->arg1->arg1 = new Node(this,h);
-	fd->arg1->arg2 = new Node('-',NAN);
-	fd->arg1->arg2->arg1 = new Node(this);
-	return fd;
-	}
-
-void Node::text(){
-	switch (type){
-		case 'n':
-			cout<<value;
-			break;
-		case 'x':
-			cout<<'x';
-			break;
-		case '-':
-			cout<<"-";
-			arg1->text();
-			break;
-		case '+':
-			cout<<"(";
-			arg1->text();
-			if(arg2->type=='-'){
-				cout<<"-";
-				arg2->arg1->text();
-				}
-			else{
-				cout<<"+";
-				arg2->text();
-				}
-			cout<<")";
-			break;
-		case '*':
-			arg1->text();
-			cout<<"*";
-			arg2->text();
-			break;
-		case 'e':
-			cout<<"exp(";
-			arg1->text();
-			cout<<")";
-			break;
-		case 'i':
-			cout<<"1/(";
-			arg1->text();
-			cout<<")";
-			break;
-		case 's':
-			cout<<"sin(";
-			arg1->text();
-			cout<<")";
-			break;
-		case 'c':
-			cout<<"cos(";
-			arg1->text();
-			cout<<")";
-			break;
-		case 'l':
-			cout<<"log(";
-			arg1->text();
-			cout<<")";
-			break;
-		case 'p'://aggiungere il caso di (^-1)=(/)
-			if((arg2->type=='n')&&(arg2->value==-1.0)){//should be useless if i want to keep only positive powers
-				cout<<"1/";
-				arg1->text();
-				}
-			else{
-				arg1->text();
-				cout<<"^(";
-				arg2->text();
-				cout<<")";
-				}
-			break;
-		default:;
+Node* Sum ::set_ad(){
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++){
+		a[i]=arg[i]->set_ad();
 		}
+	return new Sum(a,ord);
 	}
 
-double Node::eval(double x){
-	switch (type){
-		case 'n':
-			return value;
-		case 'x':
-			return x;
-		case '-':
-			return -(arg1->eval(x));
-		case '+':
-			return arg1->eval(x)+arg2->eval(x);
-		case '*':
-			return (arg1->eval(x))*(arg2->eval(x));
-		case 'e':
-			return exp(arg1->eval(x));
-		case 'i':
-			return 1.0/arg1->eval(x);
-		case 's':
-			return sin(arg1->eval(x));
-		case 'c':
-			return cos(arg1->eval(x));
-		case 'l':
-			return log(arg1->eval(x));
-		case 'p':
-			return pow(arg1->eval(x),arg2->eval(x));
-		default:
-			return x;
+Node* Prod::set_ad(){
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++){
+		a[i]= new Prod(omit(i)->set_ad(),arg[i]->copy());
 		}
-	}	
+	return new Sum(a,ord);
+	}
 	
-bool Node::compare(Node* a){
-	if(a->type==type){
-		if(a->arg2!=NULL){
-			return (arg1->compare(a->arg1)&arg2->compare(a->arg2))|(arg2->compare(a->arg1)&arg1->compare(a->arg2));
-			}
-		else if(a->arg1!=NULL){
-			return arg1->compare(a->arg1);
-			}
-		else if((a->type=='n')&&(a->value!=value)){
-			return 0;
-			}
-		else return 1;
+Node* Minus::set_ad() {return new Minus(arg[0]->set_ad());}
+Node* Exp::set_ad(){return new Prod(copy(),arg[0]->set_ad());}
+Node* Sin::set_ad(){return new Prod(new Cos(arg[0]->copy()),arg[0]->set_ad());}
+Node* Cos::set_ad(){return new Prod(new Minus(new Sin(arg[0]->copy())),arg[0]->set_ad());}
+Node* Log::set_ad(){return new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0))));}
+Node* Pow::set_ad(){return new Prod(copy(),new Sum(new Prod(new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0)))),arg[1]->copy()),new Prod(new Log(arg[0]->copy()),arg[1]->set_ad())));}
+Node* X:: set_ad(){
+	Node* a = new Number(1.0);
+	return a;
+	}
+Node* Number::set_ad(){return new Number(0.0);}
+/*
+Node* Node::set_fd(){
+	return new Prod(new Sum(shift_copy(h),new Minus(copy())),new Pow(new Number(h),new Minus(new Number(1.0))));
+	}
+*/
+void Number::text(){cout<<value;}
+
+void X::text(){cout<<'x';}
+
+void Minus::text(){
+	cout<<'-';
+	arg[0]->text();
+	}
+	
+void Sum::text(){
+	cout<<'(';
+	arg[0]->text();
+	for(int i=1;i<ord;i++){
+		if (typeid(arg[i])!=typeid(Minus*)) cout<<'+';
+		arg[i]->text();
 		}
-	return 0;
+	cout<<')';
+	}
+	
+void Prod::text(){
+	arg[0]->text();
+	for(int i=1;i<ord;i++){
+		cout<<'*';
+		arg[i]->text();
+		}	
+	}
+	
+void Exp::text(){
+	cout<<"exp(";
+	arg[0]->text();
+	cout<<')';
+	}
+	
+void Cos::text(){
+	cout<<"cos(";
+	arg[0]->text();
+	cout<<')';
+	}
+	
+void Sin::text(){
+	cout<<"sin(";
+	arg[0]->text();
+	cout<<')';
+	}
+	
+void Log::text(){
+	cout<<"log(";
+	arg[0]->text();
+	cout<<')';
+	}
+	
+void Pow::text(){
+	arg[0]->text();
+	cout<<"^(";
+	arg[1]->text();
+	cout<<')';
+	}
+
+double Number::eval(double x){return value;}
+double X::eval(double x){return x;}
+double Minus::eval(double x){return -arg[0]->eval(x);}
+double Sum::eval(double x){
+	double r=0.0;
+	for(int i=0;i<ord;i++){
+		r=r+arg[i]->eval(x);
+		}
+	return r;
+	}
+double Prod::eval(double x){
+	double r=1.0;
+	for(int i=0;i<ord;i++){
+		r=r*arg[i]->eval(x);
+		}
+	return r;
+	}
+	
+double Exp::eval(double x){return exp(arg[0]->eval(x));}
+double Log::eval(double x){return log(arg[0]->eval(x));}
+double Sin::eval(double x){return sin((arg[0])->eval(x));}
+double Cos::eval(double x){return cos(arg[0]->eval(x));}
+double Pow::eval(double x){return pow(arg[0]->eval(x),arg[1]->eval(x));}
+	
+bool Node::compare(Node* a){//arguments must be ordered somewhere
+	if ((ord!=a->ord)||(typeid(a)!=typeid(this))) return 0;
+	bool s=1;
+	for(int i=0;i<ord;i++){
+		if(!(arg[i]->compare(a->arg[i]))) return 0;
+		}
+	return 1;
 	}
 	
 int checkfor(char* s, int m, char l){
@@ -531,3 +501,10 @@ int checkfor(char* s, int m, char l){
 		}
 	return i;
 	}
+	
+Node* Node::copy(){return 0;}
+Node* Node::omit(int){return 0;}
+Node* Node::set_ad(){cout<<"^^!"<<endl;return 0;}
+void Node::text(){cout<<"ops!"<<endl;}
+double Node::eval(double){return 0;}
+Node* Node::fuse(Node*){return 0;}
