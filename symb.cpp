@@ -114,7 +114,7 @@ Node* Sum::fuse(Node* a){
 	}
 
 Node* Prod::fuse(Node* a){
-	int o=ord+a->ord;
+	int o=ord+a->ord-1;
 	Node** b=(Node**)malloc(o*sizeof(Node*));
 	for(int i=0;i<ord;i++) b[i]=arg[i]->copy();
 	for(int i=0;i<a->ord;i++) b[i+ord]=a->arg[i]->copy();
@@ -245,17 +245,15 @@ Node* Pow::clean(){
 		delete cl;
 		cl=s;
 		}
-	if(typeid(*(cl->arg[1])).name()==typeid(Number).name()){
+	else if(typeid(*(cl->arg[1])).name()==typeid(Number).name()){
 		if((static_cast<Number*>(cl->arg[1]))->value==0.0){
+			double q=1.0;
 			if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
-				goto flag;
+				if((static_cast<Number*>(cl->arg[0]))->value==0.0) q=NAN;
 				}
-			else if((static_cast<Number*>(cl->arg[0]))->value!=0.0){
-				flag:
-				Node* s = new Number(1.0);
-				delete cl;
-				cl=s;
-				}
+			Node* s = new Number(q);
+			delete cl;
+			cl=s;
 			}
 		}
 	return cl;
@@ -277,7 +275,10 @@ Node* Log::clean(){
 	}
 	
 Node* X::clean(){return copy();} 
-Node* Number::clean(){return copy();}
+Node* Number::clean(){
+	if(value<0.0) return new Minus(new Number(-value));//is this really a good idea?
+	else return copy();
+	}
 
 Node* strton(char* s, int m){
 	char* ctrl;
