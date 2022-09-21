@@ -25,6 +25,10 @@ int main(int argc, char** argv) {
 		cout<<"Input: ";
 		cin>>in;
 		switch(in[0]){
+			case 't':
+				f->text();
+				cout<<endl;
+				continue;
 			case 'i':
 				cout<<"Input a new function f(x): ";
 				cin>>in;
@@ -44,18 +48,16 @@ int main(int argc, char** argv) {
 				cout<<"f("<<r<<")="<<f->eval(r)<<endl;
 				continue;
 			case 'q':
-				cout<<f<<endl<<f->arg[0]<<endl;
 				delete f;
 				return 0;
 			default:
 			cout<<"Press i to insert a new function"<<endl<<
 			"      s to simplify"<<endl<<"      d to derive"<<endl<<
-			"      e to evaluate"<<endl<<"      q to exit"<<endl;
+			"      e to evaluate"<<endl<<"      t to print"<<endl<<"      q to exit"<<endl;
 			goto start;
 			}
 		delete f;
 		f=g;
-		f->text();
 		cout<<endl;
 		}
 	}

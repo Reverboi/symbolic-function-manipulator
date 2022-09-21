@@ -92,6 +92,7 @@ Node* Prod::omit(int b){
 	if(ord==2) return a[0]->copy();
 	else return new Prod(a,ord-1);
 	}
+	
 int Node::size(){
 	int r=1;
 	for(int i=0;i<ord;i++) r=r+arg[1]->size();
@@ -105,19 +106,29 @@ bool Node::just_numbers(){
 	return 1;
 	}
 
-Node* Sum::fuse(Node* a){
-	int o=ord+a->ord;
+Node* Sum::fuse(int a){
+	int o=ord+arg[a]->ord-1;
 	Node** b=(Node**)malloc(o*sizeof(Node*));
-	for(int i=0;i<ord;i++) b[i]=arg[i]->copy();
-	for(int i=0;i<a->ord;i++) b[i]=a->arg[i+ord]->copy();
+	int j=0;
+	for(int i=0;i<ord;i++){
+		if(i==a) continue;
+		b[j]=arg[i]->copy();
+		j++;
+		}
+	for(int i=0;i<arg[a]->ord;i++,j++) b[j]=arg[a]->arg[i]->copy();
 	return new Sum(b,o);
 	}
-
-Node* Prod::fuse(Node* a){
-	int o=ord+a->ord-1;
+	
+Node* Prod::fuse(int a){
+	int o=ord+arg[a]->ord-1;
 	Node** b=(Node**)malloc(o*sizeof(Node*));
-	for(int i=0;i<ord;i++) b[i]=arg[i]->copy();
-	for(int i=0;i<a->ord;i++) b[i+ord]=a->arg[i]->copy();
+	int j=0;
+	for(int i=0;i<ord;i++){
+		if(i==a) continue;
+		b[j]=arg[i]->copy();
+		j++;
+		}
+	for(int i=0;i<arg[a]->ord;i++,j++) b[j]=arg[a]->arg[i]->copy();
 	return new Prod(b,o);
 	}
 
@@ -127,6 +138,13 @@ Node* Sum::clean(){
 		c[i]=arg[i]->clean();
 		}
 	Node* cl=new Sum(c,ord);
+	for(int i=0;i<cl->ord;i++){
+			if(typeid(*(cl->arg[i])).name()==typeid(Sum).name()){
+				Node* s=cl->fuse(i);
+				delete cl;
+				cl=s;
+				}
+			}
 	if(cl->just_numbers()){
 		Node* s=new Number(cl->eval(NAN));
 		delete cl;
@@ -142,14 +160,6 @@ Node* Sum::clean(){
 				}
 			}
 		}
-		int k=cl->ord;
-		for(int i=0;i<k;i++){
-			if(typeid(cl->arg[i])==typeid(Sum*)){
-				Node* s=cl->fuse(cl->arg[i]);
-				delete cl;
-				cl=s;
-				}
-			}
 		}
 	return cl;
 	}
@@ -159,7 +169,15 @@ Node* Prod::clean(){
 		c[i]=arg[i]->clean();
 		}
 	Node* cl=new Prod(c,ord);
-	if(cl->just_numbers()){
+	for(int i=0;i<cl->ord;i++){
+			if(typeid(*(cl->arg[i])).name()==typeid(Prod).name()){
+				Node* s=cl->fuse(i);
+				delete cl;
+				cl=s;
+				}
+			}
+	
+	if(cl->just_numbers()){//sbagliato, voglio precalcolare anche solo due numeri
 		Node* s=new Number(cl->eval(NAN));
 		delete cl;
 		cl=s;
@@ -180,14 +198,7 @@ Node* Prod::clean(){
 				}
 			}
 		}
-		int k=cl->ord;
-		for(int i=0;i<k;i++){
-			if(typeid(*(cl->arg[i])).name()==typeid(Prod).name()){
-				Node* s=cl->fuse(cl->arg[i]);
-				delete cl;
-				cl=s;
-				}
-			}
+		
 		}
 	return cl;
 	}
@@ -244,8 +255,14 @@ Node* Pow::clean(){
 		Node* s = new Number(cl->eval(NAN));
 		delete cl;
 		cl=s;
+		goto end;
 		}
-	else if(typeid(*(cl->arg[1])).name()==typeid(Number).name()){
+	if(typeid(*(cl->arg[0])).name()==typeid(Pow).name()){
+		Node* s = new Pow(cl->arg[0]->arg[0]->copy(),new Prod(cl->arg[1]->copy(),cl->arg[0]->arg[1]->copy()));
+		delete cl;
+		cl=s;
+		}
+	if(typeid(*(cl->arg[1])).name()==typeid(Number).name()){
 		if((static_cast<Number*>(cl->arg[1]))->value==0.0){
 			double q=1.0;
 			if(typeid(*(cl->arg[0])).name()==typeid(Number).name()){
@@ -256,6 +273,7 @@ Node* Pow::clean(){
 			cl=s;
 			}
 		}
+	end:
 	return cl;
 	}
 
@@ -325,7 +343,7 @@ Node* strton(char* s, int m){
 		return new Minus(strton(&s[1],m-1));
 		}
 	if((ctrl-s)==m*sizeof(char)){
-		cout<<pippo<<endl;
+		//cout<<pippo<<endl;
 		return new Number(pippo);
 		}
 	
@@ -379,7 +397,7 @@ Node* Sum ::set_ad(){
 Node* Prod::set_ad(){
 	Node** a=(Node**)malloc(ord*sizeof(Node*));
 	for(int i=0;i<ord;i++){
-		a[i]= new Prod(omit(i)->set_ad(),arg[i]->copy());
+		a[i]= new Prod(omit(i),arg[i]->set_ad());
 		}
 	return new Sum(a,ord);
 	}
@@ -389,7 +407,9 @@ Node* Exp::set_ad(){return new Prod(copy(),arg[0]->set_ad());}
 Node* Sin::set_ad(){return new Prod(new Cos(arg[0]->copy()),arg[0]->set_ad());}
 Node* Cos::set_ad(){return new Prod(new Minus(new Sin(arg[0]->copy())),arg[0]->set_ad());}
 Node* Log::set_ad(){return new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0))));}
+
 Node* Pow::set_ad(){return new Prod(copy(),new Sum(new Prod(new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0)))),arg[1]->copy()),new Prod(new Log(arg[0]->copy()),arg[1]->set_ad())));}
+
 Node* X:: set_ad(){
 	Node* a = new Number(1.0);
 	return a;
@@ -503,9 +523,6 @@ int checkfor(char* s, int m, char l){
 	return i;
 	}
 	
-Node* Node::copy(){return 0;}
+//Node* Node::copy(){return 0;}
 Node* Node::omit(int){return 0;}
-Node* Node::set_ad(){cout<<"^^!"<<endl;return 0;}
-void Node::text(){cout<<"ops!"<<endl;}
-double Node::eval(double){return 0;}
-Node* Node::fuse(Node*){return 0;}
+Node* Node::fuse(int a){return 0;}

@@ -15,21 +15,20 @@ class Node{
 	Node (Node*,Node*);
 	//virtual Node (Node*,double);//shift constructor for the fd
 	~Node();//destruct
-	virtual Node* copy();//deep copy
+	virtual Node* copy()=0;//deep copy
 	//virtual Node* shift_copy(double);
 	virtual Node* omit(int);
 	//virtual Node* set_fd();
-	virtual Node* set_ad();
+	virtual Node* set_ad()=0;
 	virtual Node* clean()=0;
 	int size();
-	virtual void text(); 
-	virtual double eval(double x);
+	virtual void text()=0;
+	virtual double eval(double x)=0;
 	bool compare(Node*);
 	bool just_numbers();
-	virtual Node* fuse(Node*);
+	virtual Node* fuse(int a);
 	//virtual double get_value()=0;
 	};
-	
 class Number: public Node{
 	
 	public:
@@ -42,8 +41,6 @@ class Number: public Node{
 	void text();
 	double eval(double);
 	Node* copy();
-	Node* omit(){return 0;};
-	Node* fuse(){return 0;};
 	//Node* shift_copy();
 	//double get_value();
 	};
@@ -56,7 +53,7 @@ class Sum: public Node{
 	Sum(Node* a,Node* b) : Node(a,b){};
 	Sum(Node** a,int b) : Node(a,b){};
 	Node* omit(int a);
-	Node* fuse(Node*);
+	Node* fuse(int a);
 	void text();
 	double eval(double);
 	Node* copy();
@@ -81,8 +78,8 @@ class Prod: public Node{
 	Prod(Node* a,Node* b) : Node(a,b){};
 	Prod(Node**a,int b) : Node(a,b){};
 	Node* omit(int a);
-	Node* fuse(Node*);
 	void text();
+	Node* fuse(int);	
 	double eval(double);
 	Node* copy();
 	//Node* shift_copy();
@@ -153,7 +150,6 @@ class X:public Node{
 	void text();
 	double eval(double);
 	Node* copy();
-	Node* fuse(){return 0;};
 	Node* omit(){return 0;};
 	};
 	
