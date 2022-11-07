@@ -2,157 +2,166 @@
 #include <math.h>
 #include <cstring>
 using namespace std;
-#define h 2e-14
 class Node{
-	private:
-	
 	public:
-		int ord; //number of arguments
+		int ord; 	//number of arguments
 		Node** arg; //array containing the adresses of its arguments
 	Node ();
 	Node (Node**,int);
 	Node (Node*);
 	Node (Node*,Node*);
-	//virtual Node (Node*,double);//shift constructor for the fd
-	~Node();//destruct
-	virtual Node* copy()=0;//deep copy
+	virtual Node* self(Node** a, int b);
+	//virtual Node (Node*,double); //shift constructor for the fd
+	~Node();//destructor
+	virtual Node* copy();//deep copy
 	//virtual Node* shift_copy(double);
-	virtual Node* omit(int);
+	virtual Node* omit(int b);
 	//virtual Node* set_fd();
 	virtual Node* set_ad()=0;
 	virtual Node* clean()=0;
+	virtual Node* absorb();
+	virtual Node* expand();
+	//virtual Node* match()=0;
+	virtual Node* append(Node*);
 	int size();
 	virtual void text()=0;
 	virtual double eval(double x)=0;
 	bool compare(Node*);
+	friend bool operator==(const Node&,const Node&);
 	bool just_numbers();
 	virtual Node* fuse(int a);
-	//virtual double get_value()=0;
 	};
+
 class Number: public Node{
-	
 	public:
-	
 	double value;
 	Node* clean();
 	Node* set_ad();
+	Node* copy();
+	Node* self(Node** a, int b);
 	//Node* set_fd();
 	Number(double a);//:Node(){value=a;}//calls default node contructor
+	Number(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
-	//double get_value();
+	Node* self(double);
 	};
 
 class Sum: public Node{
 	public:
 	Node* clean();
 	Node* set_ad();
+	Node* self(Node** a, int b);
+	Node* absorb();
 	//Node* set_fd();
 	Sum(Node* a,Node* b) : Node(a,b){};
 	Sum(Node** a,int b) : Node(a,b){};
-	Node* omit(int a);
-	Node* fuse(int a);
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Minus: public Node{
 	public:
 	Minus(Node* a) : Node(a){};
 	Node* clean();
+	Node* expand();
+	Node* self(Node** a, int b);
 	Node* set_ad();
+	Minus(Node** a,int b) : Node(a,b){};
 	//Node* set_fd();
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Prod: public Node{
 	public:
 	Node* clean();
 	Node* set_ad();
+	Node* self(Node** a, int b);
+	Node* expand();
+	Node* absorb();
 	//Node* set_fd();
 	Prod(Node* a,Node* b) : Node(a,b){};
-	Prod(Node**a,int b) : Node(a,b){};
-	Node* omit(int a);
+	Prod(Node** a,int b) : Node(a,b){};
 	void text();
-	Node* fuse(int);	
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Exp:public Node{
 	public:
 	Node* clean();
+	Node* self(Node** a, int b);
 	Node* set_ad();
 	//Node* set_fd();
 	Exp(Node* a) : Node(a){};
+	Exp(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Log:public Node{
 	public:
 	Node* clean();
 	Node* set_ad();
+	Node* self(Node** a, int b);
 	//Node* set_fd();
 	Log(Node* a) : Node(a){};
+	Log(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Cos:public Node{
 	public:
 	Node* clean();
+	Node* self(Node** a, int b);
 	Node* set_ad();
 	//Node* set_fd();
 	Cos(Node* a) : Node(a){};
+	Cos(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Sin:public Node{
 	public:
 	Node* clean();
 	Node* set_ad();
+	Node* self(Node** a, int b);
 	//Node* set_fd();
 	Sin(Node* a) : Node(a){};
+	Sin(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class Pow:public Node{
 	public:
+	Node* absorb();
 	Node* clean();
 	Node* set_ad();
+	Node* self(Node** a, int b);
+	Node* expand();
 	//Node* set_fd();
 	Pow(Node* a,Node* b) : Node(a,b){};
+	Pow(Node** a,int b) : Node(a,b){};
 	void text();
 	double eval(double);
-	Node* copy();
-	//Node* shift_copy();
 	};
+
 class X:public Node{
 	public:
 	X():Node(){};
+	X(Node** a,int b) : Node(a,b){};
 	~X();
 	Node* clean();
+	Node* self(Node** a, int b);
 	Node* set_ad();
 	//Node* set_fd();
-	//Node* shift_copy(double);
 	void text();
 	double eval(double);
-	Node* copy();
-	Node* omit(){return 0;};
 	};
-	
+
+Node** nalloc(int);
 Node* strton (char*,int);
 int  checkfor(char* s, int m, char l);
-

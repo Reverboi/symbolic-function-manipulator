@@ -2,13 +2,13 @@
 #include <math.h>
 #include <cstring>
 #include <string>
-#include "symb.h"
+#include "symb.hpp"
 using namespace std;
 
 int main(int argc, char** argv) {
 	if (argc > 2) {
-    	printf("Usage:   %s <f(x)> \n", argv[0]);
-    	printf("Example: %s 'sin(x)' \n", argv[0]);
+    	printf("Usage:   %s < f (x)> \n", argv[0]);
+    	printf("Example: %s 'sin(x)'\n", argv[0]);
     	exit(EXIT_FAILURE);
 		}
 	Node* f,* g=NULL;
@@ -20,6 +20,9 @@ int main(int argc, char** argv) {
 		cin>>in;
 		f = strton(const_cast<char *>(in.c_str()),in.size());
 		}
+	g=f->copy();
+	cout<<"this should be one or true or whatev:.."<<(*g==*f)<<endl;
+	delete g;
 	while(1){
 		start:
 		cout<<"Input: ";
@@ -41,7 +44,13 @@ int main(int argc, char** argv) {
 			case 'd':
 				g=f->set_ad();
 				break;
+			case 'a':
+				g=f->absorb();
+				break;
 			case 'e':
+				g=f->expand();
+				break;
+			case 'v':
 				double r;
 				cout<<"Insert x value: ";
 				cin>>r;
@@ -53,7 +62,8 @@ int main(int argc, char** argv) {
 			default:
 			cout<<"Press i to insert a new function"<<endl<<
 			"      s to simplify"<<endl<<"      d to derive"<<endl<<
-			"      e to evaluate"<<endl<<"      t to print"<<endl<<"      q to exit"<<endl;
+			"      e to expand"<<endl<<"      a to absorb"<<endl<<
+			"      v to evaluate"<<endl<<"      t to print"<<endl<<"      q to exit"<<endl;
 			goto start;
 			}
 		delete f;

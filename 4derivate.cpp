@@ -1,7 +1,7 @@
 #include <iostream>
 #include <math.h>
 #include <cstring>
-#include "symb.h"
+#include "symb.hpp"
 using namespace std;
 
 int main(int argc,char** argv) {
