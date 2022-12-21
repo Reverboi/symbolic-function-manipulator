@@ -21,7 +21,6 @@ int main(int argc, char** argv) {
 		f = strton(const_cast<char *>(in.c_str()),in.size());
 		}
 	g=f->copy();
-	cout<<"this should be one or true or whatev:.."<<(*g==*f)<<endl;
 	delete g;
 	while(1){
 		start:
@@ -39,6 +38,12 @@ int main(int argc, char** argv) {
 				f = strton(const_cast<char *>(in.c_str()),in.size());
 				continue;
 			case 's':
+				g=f->simplify();
+				break;
+			case 'm':
+				g=f->match();
+				break;
+			case 'c':
 				g=f->clean();
 				break;
 			case 'd':

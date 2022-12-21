@@ -16,12 +16,6 @@ Node :: Node(Node** a,int b){
 	ord=b;
 	}
 
-Number :: Number(double b){
-	ord=0;
-	arg=NULL;
-	value=b;
-	}
-
 Node :: Node(Node* b){
 	ord=1;
 	arg=nalloc(ord);
@@ -33,6 +27,12 @@ Node :: Node(Node* b,Node* c){
 	arg=nalloc(ord);
 	arg[0]=b;
 	arg[1]=c;
+	}
+
+Number :: Number(double b){
+	ord=0;
+	arg=NULL;
+	value=b;
 	}
 
 		//DESTRUCTOR
@@ -51,6 +51,7 @@ Node* Node  :: copy(){
 	for(int i=0;i<ord;i++) a[i]=arg[i]->copy();//recursion
 	return self(a,ord);
 	}
+
 Node* Number::copy(){return new Number(value);}
 
 Node* Node :: omit(int b){
@@ -75,27 +76,6 @@ int Node::size(){
 	return r;
 	}
 	
-bool Node::just_numbers(){
-	for(int i=0;i<ord;i++){
-		if(typeid(*arg[i]).name()!=typeid(Number).name()) return 0;
-		}
-	return 1;
-	}
-
-Node* Node::fuse(int a){
-	if ((a<0)||(a>=ord)){
-		cout<<"fuse out of bounds"<<endl;
-		return NULL;
-		}
-	Node* d=omit(a);
-	for(int i=0;i<arg[a]->ord;i++){
-		Node* s=d->append(arg[a]->arg[i]);
-		delete d;
-		d=s;
-		}
-	return d;
-	}
-	
 Node* Node::append(Node* s){
 	int k=ord+1;
 	Node** a=nalloc(k);
@@ -104,195 +84,118 @@ Node* Node::append(Node* s){
 	return self(a,k);
 	}
 
-			//CLEAN
+		//CLEAN    pre-computing, non-type-preserving
 
 Node* Sum::clean(){
-	Node** c=nalloc(ord);
-	for(int i=0;i<ord;i++) c[i]=arg[i]->clean();//recursion
-	Node* cl= new Sum(c,ord);
-	for(int i=0;i<cl->ord;i++){
-		if(typeid(*(cl->arg[i])).name()==typeid(Number).name()){// elimino gli zero
-			if((static_cast<Number*>(cl->arg[i]))->value==0.0){
-				Node* s=cl->omit(i--);//...!!
-				delete cl;
-				cl=s;
+	if(ord==1) return arg[0]->copy();
+	if(ord==0) return new Number(0.0); //spero non torni mai utile
+	int n=ord;
+	double tot=0.0;
+	bool* f=(bool*)malloc(sizeof(bool)*ord);//flag
+	for(int i=0;i<ord;i++){
+		f[i]=true;
+		if(typeid(*(arg[i])).name()==typeid(Number).name()){// conto i numeri
+			tot += (static_cast<Number*>(arg[i]))->value; 
+			n--;
+			f[i]=false;
+			}
+		}
+	if(n==0){
+		free (f);
+		return new Number(tot);
+		}
+	if(tot!=0.0) n++;
+	else if(n==1){
+		for(int i=0;i<ord;i++){
+			if(f[i]) {
+				free (f);
+				return arg[i]->copy();
 				}
 			}
 		}
-	if(cl->ord==0){
-		Node* s=new Number(0.0);
-		delete cl;
-		cl=s;
+	Node** a = nalloc(n);
+	for(int i=0,j=0;i<ord;i++){
+		if(f[i]) a[j++]=arg[i]->copy();
 		}
-	if(cl->ord==1){
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		cl=s;
-		}
-	return cl;
-	}
+	free(f);
+	if (tot!=0.0) a[n-1]=new Number (tot);
 	
+	return new Sum(a,n);
+	}
+
 Node* Prod::clean(){
-	Node** c=nalloc(ord);
-	int n_minus=0;
+	if(ord==1) return arg[0]->copy();
+	if(ord==0) return new Number(1.0); //spero non torni mai utile
+	int n=ord;
+	double tot=1.0;
+	bool* f=(bool*)malloc(sizeof(bool)*ord);//flag
 	for(int i=0;i<ord;i++){
-		if(typeid(*(arg[i])).name()==typeid(Minus).name()){
-			n_minus++;
-			c[i]=arg[i]->arg[0]->copy();//!recursion
+		f[i]=true;
+		if(typeid(*(arg[i])).name()==typeid(Number).name()){// conto i numeri
+			tot = tot * (static_cast<Number*>(arg[i]))->value; 
+			n--;
+			f[i]=false;
 			}
-		else c[i]=arg[i]->copy();//!recursion
 		}
-	Node** d=nalloc(ord);
-	for(int i=0;i<ord;i++){
-		d[i]=c[i]->clean();
-		delete c[i];
+	if((n==0)||(tot==0)){
+		free (f);
+		return new Number(tot);
 		}
-	free(c);
-	Node* cl=new Prod(d,ord);
-	for(int i=0;i<cl->ord;i++){
-		if(typeid(*(cl->arg[i])).name()==typeid(Number).name()){
-			if((static_cast<Number*>(cl->arg[i]))->value==0.0){
-				delete cl;
-				return new Number(0.0);
-				}
-			if((static_cast<Number*>(cl->arg[i]))->value==1.0){
-				Node* s=cl->omit(i--);
-				delete cl;
-				cl=s;
+	if(tot!=1.0) n++;
+	else if(n==1){
+		for(int i=0;i<ord;i++){
+			if(f[i]) {
+				free (f);
+				return arg[i]->copy();
 				}
 			}
 		}
-	if(cl->ord==0){
-		Node* s=new Number(1.0);
-		delete cl;
-		cl=s;
+	Node** a = nalloc(n);
+	for(int i=0,j=0;i<ord;i++){
+		if(f[i]) a[j++]=arg[i]->copy();
 		}
-	if(cl->ord==1){
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		cl=s;
-		}
-	if(n_minus%2==0) return cl;
-	else return new Minus(cl);
-	}
-
-Node* Minus::clean(){
-	Node* cl=arg[0]->clean();//recursion
-	if(typeid(*cl).name()==typeid(Number).name()){		//-0 = 0
-		if((static_cast<Number*>(cl))->value==0.0){
-			return cl;// barely cheating, barely
-			}
-		}
-	else if(typeid(*cl).name()==typeid(Minus).name()){	//-(-())=()
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		return s;
-		}
-	else if(typeid(*cl).name()==typeid(Sum).name()){
-		int k=cl->ord;
-		Node** a=nalloc(k);
-		for(int i=0;i<k;i++) a[i]=new Minus(cl->arg[i]->copy());
-		delete cl;
-		return new Sum(a,k);
-		}
-	return new Minus(cl);
-	}
-
-Node* Cos::clean(){
-	Node* cl=arg[0]->clean();//recursion
-	if(typeid(*cl).name()==typeid(Number).name()){
-		if(static_cast<Number*>(cl)->value==0.0){
-			delete cl;
-			return new Number(1.0);
-			}
-		}
-	if(typeid(*(cl)).name()==typeid(Minus).name()){//il coseno è pari
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		cl=s;
-		}
-	return new Cos(cl);
-	}
+	free(f);
+	if (tot!=1.0) a[n-1]=new Number (tot);
 	
-Node* Sin::clean(){
-	Node* cl=arg[0]->clean();//recursion
-	if(typeid(*cl).name()==typeid(Minus).name()){//il seno è dispari
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		return new Minus(new Sin(s));
-		}
-	if(typeid(*cl).name()==typeid(Number).name()){
-		if(static_cast<Number*>(cl)->value==0.0){
-			return cl;
-			}
-		}
-	return new Sin(cl);
+	return new Prod(a,n);
 	}
 
-Node* Exp::clean(){
-	Node* cl=arg[0]->clean();//recursion
-	if(typeid(*cl).name()==typeid(Number).name()){
-		if(static_cast<Number*>(cl)->value==0.0){
-			delete cl;
-			return new Number(1.0);
-			}
+Node* Node::clean(){
+	if(typeid(*arg[0]).name()==typeid(Number).name()){///potreppe dare problemi se è un leaf node
+		return new Number(eval(NAN));
 		}
-	return new Exp(cl);
+	return copy();
 	}
 
 Node* Pow::clean(){
-	Node* a=arg[0]->clean();//recursion
-	Node* b=arg[1]->clean();//recursion
-	if(typeid(*a).name()==typeid(Number).name()){
-		if((static_cast<Number*>(a))->value==1.0){
-			delete b;
-			return a;
-			}
-		if((static_cast<Number*>(a))->value==0.0){
-			double q=0.0;
-			if(typeid(*b).name()==typeid(Number).name()){
-				if((static_cast<Number*>(b))->value==0.0) q=NAN;
-				}
-			delete a;
-			delete b;
-			return new Number(q);
-			}
+	if((typeid(*arg[0]).name()==typeid(Number).name())&&(typeid(*arg[1]).name()==typeid(Number).name())){
+		return new Number(eval(NAN));
 		}
-	if(typeid(*b).name()==typeid(Number).name()){
-		if((static_cast<Number*>(b))->value==0.0){
-			delete a;
-			delete b;
-			return new Number(1.0);
-			}
-		if((static_cast<Number*>(b))->value==1.0){
-			delete b;
-			return a;
-			}
+	if(typeid(*arg[0]).name()==typeid(Number).name()){
+		if((static_cast<Number*>(arg[0]))->value==1.0) return new Number(1.0);
+		if((static_cast<Number*>(arg[0]))->value==0.0) return new Number(0.0);
 		}
-	return new Pow(a,b);
+	if(typeid(*arg[1]).name()==typeid(Number).name()){
+		if((static_cast<Number*>(arg[1]))->value==0.0) return new Number(1.0);
+		if((static_cast<Number*>(arg[1]))->value==1.0) return arg[0]->copy();
+		}
+	return copy();
 	}
 
 Node* Log::clean(){
-	Node* cl=arg[0]->clean();//recursion
-	if(typeid(*cl).name()==typeid(Number).name()){
-		if(static_cast<Number*>(cl)->value==1.0){
-			delete cl;
-			return new Number(0.0);
-			}
+	if(typeid(*arg[0]).name()==typeid(Number).name()){
+		return new Number(eval(NAN));//doesent matter whwere you evaluate it, thats for x
 		}
-	if(typeid(*cl).name()==typeid(Exp).name()){
-		Node* s=cl->arg[0]->copy();
-		delete cl;
-		cl=s;
+	if(typeid(*arg[0]).name()==typeid(Exp).name()){
+		return arg[0]->arg[0]->copy();
 		}
-	return cl;
+	return copy();
 	}
 	
 Node* X::clean(){return copy();} 
 
 Node* Number::clean(){
-	if(value<0.0) return new Minus(new Number(-value));//is this really a good idea?
-	else return copy();
+	return copy();
 	}
 
 Node* strton(char* s, int m){
@@ -328,22 +231,20 @@ Node* strton(char* s, int m){
 		}
 	j=checkfor(s,m,'/');
 	if(j!=-1){
-		return new Prod(strton(s,j),new Pow(strton(&s[j+1],m-j-1),new Minus(new Number(1.0))));
+		return new Prod(strton(s,j),new Pow(strton(&s[j+1],m-j-1),new Number(-1.0)));
 		}
 	j=checkfor(s,m,'^');
 	if(j!=-1){
 		return new Pow(strton(s,j),strton(&s[j+1],m-j-1));
 		}
 	if(s[0]=='-'){
-		return new Minus(strton(&s[1],m-1));
+		return new Prod(new Number(-1.0),strton(&s[1],m-1));
 		}
 	if((ctrl-s)==m*sizeof(char)){
-		//cout<<pippo<<endl;
 		return new Number(pippo);
 		}
 	
 	if(m<6){
-		cout<<'p'<<endl;
 		goto err;
 		}
 	if((s[0]=='s')&&(s[1]=='i')&&(s[2]=='n')){
@@ -363,7 +264,6 @@ Node* strton(char* s, int m){
 		}
 		
 	if(m<8){
-		cout<<'!'<<endl;
 		goto err;
 		}
 		
@@ -374,7 +274,7 @@ Node* strton(char* s, int m){
 			goto err;
 			}
 		return new Pow(strton(&s[4],j),strton(&s[j+5],m-6-j));
-	}
+		}
 	err:
 	cout << "Syntax Error" << endl; //learn about throwing exeptions
 	return NULL;
@@ -389,57 +289,67 @@ Node* Sum ::set_ad(){
 	}
 
 Node* Prod::set_ad(){
+	if(ord==1) return arg[0]->set_ad();
 	Node** a=nalloc(ord);
-	for(int i=0;i<ord;i++) a[i] = new Prod(omit(i),arg[i]->set_ad());
+	
+	for(int i=0;i<ord;i++){
+		
+		a[i] = new Prod(omit(i),arg[i]->set_ad());
+		}
 	return new Sum(a,ord);
 	}
 
-Node* Minus::set_ad(){return new Minus(arg[0]->set_ad());}
+
 Node* Exp::set_ad(){return new Prod(copy(),arg[0]->set_ad());}
 Node* Sin::set_ad(){return new Prod(new Cos(arg[0]->copy()),arg[0]->set_ad());}
-Node* Cos::set_ad(){return new Prod(new Minus(new Sin(arg[0]->copy())),arg[0]->set_ad());}
-Node* Log::set_ad(){return new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0))));}
-Node* Pow::set_ad(){return new Prod(copy(),new Sum(new Prod(new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Minus(new Number(1.0)))),arg[1]->copy()),new Prod(new Log(arg[0]->copy()),arg[1]->set_ad())));}
-Node* X:: set_ad(){
-	Node* a = new Number(1.0);
-	return a;
-	}
+Node* Cos::set_ad(){return new Prod(new Prod(new Sin(arg[0]->copy()),arg[0]->set_ad()),new Number(-1.0));}
+Node* Log::set_ad(){return new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Number(-1.0)));}
+Node* Pow::set_ad(){return new Prod(copy(),new Sum(new Prod(new Prod(arg[0]->set_ad(),new Pow(arg[0]->copy(),new Number(-1.0))),arg[1]->copy()),new Prod(new Log(arg[0]->copy()),arg[1]->set_ad())));}
+Node* X:: set_ad(){return new Number(1.0);}
 Node* Number::set_ad(){return new Number(0.0);}
-
-/*
-Node* Node::set_fd(){
-	return new Prod(new Sum(shift_copy(h),new Minus(copy())),new Pow(new Number(h),new Minus(new Number(1.0))));
-	}
-*/
 
 			//TEXT
 
-void Number::text(){cout<<value;}
+void Number::text(){
+	if(value>=0) cout<<value;
+	else cout<<'('<<value<<')';
+	}
 
 void X::text(){cout<<'x';}
 
-void Minus::text(){
-	cout<<"(-";
-	arg[0]->text();
-	cout<<')';
-	}
-
 void Sum::text(){
-	cout<<'(';
-	arg[0]->text();
+	arg[0]->text();//not ideal
 	for(int i=1;i<ord;i++){
-		if (typeid(arg[i])!=typeid(Minus*)) cout<<'+';
+		cout<<'+';
 		arg[i]->text();
 		}
-	cout<<')';
 	}
 
 void Prod::text(){
-	arg[0]->text();
-	for(int i=1;i<ord;i++){
-		cout<<'*';
-		arg[i]->text();
-		}	
+	double t=1.0;
+	bool* f=(bool*)malloc(ord*sizeof(bool));
+	for(int i=0;i<ord;i++){// i know a display function shouldn't do computation but i just wanted to make it work
+		f[i]=true;
+		if(typeid(*arg[i]).name()==typeid(Number).name()){
+			t=t*(static_cast<Number*>(arg[i]))->value;
+			f[i]=false;
+			}
+		}
+	if (t==-1.0) cout<<'-';
+	else if (t!=1) cout<<t;
+	for(int i=0,j=0;i<ord;i++){
+		if(f[i]){
+			j++;
+			if((j!=1)||((j==1)&&(t!=1)&&(t!=-1))) cout<<'*'; 
+			if(arg[i]->ord>1){
+				cout<<'(';
+				arg[i]->text();
+				cout<<')';
+				}
+			else arg[i]->text();
+			}
+		}
+	free (f);
 	}
 
 void Exp::text(){
@@ -467,17 +377,25 @@ void Log::text(){
 	}
 
 void Pow::text(){
-	arg[0]->text();
-	cout<<"^(";
-	arg[1]->text();
-	cout<<')';
+	if(arg[0]->ord>1){
+		cout<<'(';
+		arg[0]->text();
+		cout<<')';
+		}
+	else arg[0]->text();
+	cout<<"^";
+	if(arg[1]->ord>1){
+		cout<<'(';
+		arg[1]->text();
+		cout<<')';
+		}
+	else arg[1]->text();
 	}
 
 			//EVAL
 
 double Number::eval(double x){return value;}
 double X::eval(double x){return x;}
-double Minus::eval(double x){return -arg[0]->eval(x);}//recursion
 
 double Sum::eval(double x){
 	double r=0.0;
@@ -548,116 +466,79 @@ int checkfor(char* s, int m, char l){
 			//ABSORB
 
 Node* Sum  :: absorb(){
-	Node** a=nalloc(ord);
-	for(int i=0;i<ord;i++) a[i]=arg[i]->absorb();//recursion
 	int n=0;
 	for(int i=0;i<ord;i++){
-		if(typeid(*(a[i])).name()==typeid(Sum).name()){
-			n+=a[i]->ord;
+		if(typeid(*(arg[i])).name()==typeid(Sum).name()){
+			n+=arg[i]->ord;
 			}
 		else n++;
 	}
 	Node** g=nalloc(n);
 	n=0;
 	for(int i=0;i<ord;i++){
-		if(typeid(*(a[i])).name()==typeid(Sum).name()){
-			for(int j=0;j<a[i]->ord;j++){
-				g[n++]=a[i]->arg[j]->copy();
+		if(typeid(*(arg[i])).name()==typeid(Sum).name()){
+			for(int j=0;j<arg[i]->ord;j++){
+				g[n++]=arg[i]->arg[j]->copy();
 				}
 			}
-		else g[n++]=a[i]->copy();
-		delete a[i];
+		else g[n++]=arg[i]->copy();
 		}
-	free(a);
 	return new Sum(g,n);
 	}
 
-Node* Prod  :: absorb(){
-	Node** a=nalloc(ord);
-	for(int i=0;i<ord;i++) a[i]=arg[i]->absorb();//recursion
+Node* Prod  :: absorb(){//is basically the same as Sum ::absorb
 	int n=0;
 	for(int i=0;i<ord;i++){
-		if(typeid(*(a[i])).name()==typeid(Prod).name()){
-			n+=a[i]->ord;
+		if(typeid(*(arg[i])).name()==typeid(Prod).name()){
+			n+=arg[i]->ord;
 			}
 		else n++;
 	}
 	Node** g=nalloc(n);
 	n=0;
 	for(int i=0;i<ord;i++){
-		if(typeid(*(a[i])).name()==typeid(Prod).name()){
-			for(int j=0;j<a[i]->ord;j++){
-				g[n++]=a[i]->arg[j]->copy();
+		if(typeid(*(arg[i])).name()==typeid(Prod).name()){
+			for(int j=0;j<arg[i]->ord;j++){
+				g[n++]=arg[i]->arg[j]->copy();
 				}
 			}
-		else g[n++]=a[i]->copy();
-		delete a[i];
+		else g[n++]=arg[i]->copy();
 		}
-	free(a);
 	return new Prod(g,n);
 	}
 
 Node* Pow :: absorb(){
-	Node* a=arg[0]->absorb();//recursion
-	Node* b=arg[1]->absorb();//recursion
-	if(typeid(*a).name()==typeid(Pow).name()){
-		Node* c=a->arg[0]->copy();
-		Node* d=new Prod(a->arg[1]->copy(),b);
-		delete a;
+	if(typeid(*arg[0]).name()==typeid(Pow).name()){//manca l'assorbimento per basi naturali e
+		Node* c=arg[0]->arg[0]->copy();
+		Node* d=new Prod(arg[0]->arg[1]->copy(),arg[1]->copy());//potrei chiedergli di assorbire questo nuovo prodotto o non serve?
 		return new Pow(c,d);
 		}
-	return new Pow(a,b);
+	return copy();
 	}
 	
-Node* Node :: absorb(){
-	Node** a = nalloc(ord);
-	for(int i=0;i<ord;i++) a[i]=arg[i]->absorb();//recursion
-	return self(a,ord);
-	}
+Node* Node :: absorb(){return copy();}//could be tolta from the node def
 	
 			//EXPAND
 
-Node* Node  :: expand(){
-	Node** a = nalloc(ord);
-	for(int i=0;i<ord;i++) a[i]=arg[i]->expand();//recursion
-	return self(a,ord);
-	}
-
-Node* Minus::expand(){
-	Node* a=arg[0]->expand();
-	if(typeid(*a).name()==typeid(Sum).name()){
-		auto k=a->ord;
-		Node** b=nalloc(k);
-		for(int i=0;i<k;i++){
-			b[i]=new Minus(a->arg[i]->copy());
-			}
-		delete a;
-		return new Sum(b,k);
-		}
-	return new Minus(a);
-	}
+Node* Node :: expand(){return copy();}//also maybe not needed
 
 Node* Prod::expand(){//very proud of this one
-	Node** a=nalloc(ord);
-	for(int i=0;i<ord;i++) a[i]=arg[i]->expand();//recursion
 	int n=1;
 	for(int i=0;i<ord;i++){
-		if(typeid(*a[i]).name()==typeid(Sum).name()){
-			n=n*a[i]->ord;
+		if(typeid(*arg[i]).name()==typeid(Sum).name()){
+			n=n*arg[i]->ord;
 			}
 		}
 	Node*** c=(Node***)malloc(sizeof(Node**)*n);
 	for(int i=0;i<n;i++) c[i]=nalloc(ord);
 	int m=1;
 	for(int j=0;j<ord;j++){
-		if(typeid(*a[j]).name()==typeid(Sum).name()){
-			for(int i=0;i<n;i++) c[i][j]=a[j]->arg[(i/m)%a[j]->ord]->copy();
-			m=m*a[j]->ord;
+		if(typeid(*arg[j]).name()==typeid(Sum).name()){
+			for(int i=0;i<n;i++) c[i][j]=arg[j]->arg[(i/m)%arg[j]->ord]->copy();
+			m=m*arg[j]->ord;
 			}
-		else for(int i=0;i<n;i++) c[i][j]=a[j]->copy();
-		delete a[j];
+		else for(int i=0;i<n;i++) c[i][j]=arg[j]->copy();
 		}
-	free(a);
 	Node** b=nalloc(n);
 	for(int i=0;i<n;i++) b[i] = new Prod(c[i],ord);
 	return new Sum(b,n);
@@ -665,65 +546,125 @@ Node* Prod::expand(){//very proud of this one
 	
 Node* Pow  :: expand(){
 	if(typeid(*(arg[0])).name()==typeid(Prod).name()){
-		Node* g=arg[1]->expand();//recursion
-		Node** a=nalloc(ord);
-		for(int i=0;i<arg[0]->ord;i++) a[i]=new Pow(arg[0]->arg[i]->expand(),g->copy());//recursion
-		delete g;
+		Node** a=nalloc(arg[0]->ord);
+		for(int i=0;i<arg[0]->ord;i++) a[i]=new Pow(arg[0]->arg[i]->copy(),arg[1]->copy());
 		return new Prod(a,arg[0]->ord);
 		}
-	else return new Pow(arg[0]->expand(),arg[1]->expand());//recursion
+	else return copy();
 	}
 
-/*
+
 			//MATCH
 
-Node* Sum  :: match(){
-	Node** a=(Node**)malloc(ord*sizeof(Node*));
-	for(int i=0;i<ord;i++) a[i]=arg[i]->match();
-	return new Sum(a,ord);
-	}
-
 Node* Prod :: match(){
-	for(int i=0;i<ord;i++){
-		if(typeid(*(arg[i])).name()==typeid(Sum).name()){
-			Node** a=(Node**)malloc(arg[i]->ord*sizeof(Node*));
-			Node* b=omit(i);
-			for(int j=0;j<arg[i]->ord;j++) a[j]=b->append(arg[i]->arg[j])->match();
-			return new Sum(a,arg[i]->ord);
+	int* key=(int*)malloc(ord*sizeof(int));
+	bool* is_pow=(bool*)malloc(ord*sizeof(bool));
+	for(int i=0; i<ord;i++){
+		key[i]=ord;
+		if(typeid(*(arg[i])).name()==typeid(Pow).name()) is_pow[i]=true;
+		else is_pow[i]=false;
+		}
+	int s=0; // numero di "famiglie"
+	for(int i=0; i<ord;i++){
+		if(key[i]==ord){
+			key[i]=s++;
+			Node* a;
+			if(is_pow[i]) a=arg[i]->arg[0];
+			else a=arg[i];
+			for(int j=i+1;j<ord;j++){
+				Node* b;
+				if(is_pow[j]) b=arg[j]->arg[0];
+				else b=arg[j];
+				if((*a)==(*b)) key[j]=key[i];
+				}
 			}
 		}
-	Node** a=(Node**)malloc(ord*sizeof(Node*));
-	for(int i=0;i<ord;i++) a[i]=arg[i]->match();
-	return new Prod(a,ord);
-	}
-
-Node* Pow  :: match(){
-	Node* g=arg[1]->match();
-	if(typeid(*(arg[0])).name()==typeid(Prod).name()){
-		Node** a=(Node**)malloc(arg[0]->ord*sizeof(Node*));
-		for(int i=0;i<arg[0]->ord;i++) a[i]=new Pow(arg[0]->arg[i]->match(),g);
-		return new Prod(a,arg[0]->ord);
+	Node** q = nalloc(s);// elem della produttoria
+	for(int i=0; i<s;i++){
+		int k=0;
+		for(int j=0;j<ord;j++){
+			if(key[j]==i) k++;
+			}
+		Node** p=nalloc(k);
+		Node* base;
+		k=0;
+		bool need_base=true;
+		for(int j=0;j<ord; j++){
+			if(key[j]==i){
+				if(need_base){
+					if(is_pow[j]) base=arg[j]->arg[0]->copy();
+					else base = arg[j]->copy();
+					need_base=false;
+					}
+				if(is_pow[j]) p[k++]=arg[j]->arg[1]->copy();
+				else p[k++]=new Number(1.0);
+				}
+			}
+		
+		if(k==1){
+			q[i]=new Pow(base,p[0]);
+			free (p);
+			}
+		else q[i]=new Pow(base,new Sum(p,k));
 		}
-	else return new Pow(arg[0]->match(),g);
+	free(key);
+	free(is_pow);
+	return new Prod(q,s);//può ritornare una produttoria da una solo elemento
 	}
 
-Node* Minus:: match(){return new Minus(arg[0]->match());}
-Node* Exp  :: match(){return new Exp(arg[0]->match());}
-Node* Cos  :: match(){return new Cos(arg[0]->match());}
-Node* Sin  :: match(){return new Sin(arg[0]->match());}
-Node* Log  :: match(){return new Log(arg[0]->match());}
-Node* X    :: match(){return new X();}
-Node* Number::match(){return new Number(value);}
+Node* Node :: match(){return copy();}
 
-Node* Node :: match(){return self(arg[0]->match());}
-*/
+			//SIMPLIFY
+
+Node* Node:: simplify(){ // voglio usare solo questa
+	Node** a=(Node**)malloc(ord*sizeof(Node*));
+	for(int i=0;i<ord;i++) a[i]=arg[i]->simplify();
+	Node* simp = self(a,ord);
+	Node* cl = simp->clean();
+	if(typeid(*simp).name()!=typeid(*cl).name()){
+		delete simp;
+		return cl;
+		}
+	delete simp;
+	
+	Node* abs = cl->absorb();
+	delete cl;
+	
+	Node* exp = abs->expand(); // expecting a sum but not always
+	delete abs;
+	
+	Node** b=(Node**)malloc(exp->ord*sizeof(Node*));
+	for(int i=0;i<exp->ord;i++) b[i]=exp->arg[i]->absorb();
+	abs = exp->self(b,exp->ord);
+	delete exp;
+	
+	Node** c=(Node**)malloc(abs->ord*sizeof(Node*));
+	for(int i=0;i<abs->ord;i++) c[i]=abs->arg[i]->clean();
+	Node* cul = abs->self(c,abs->ord);
+	delete abs;
+	
+	cl=cul->clean();
+	delete cul;
+	
+	Node* mat = cl->match();
+	delete cl;
+	
+	Node** d=(Node**)malloc(mat->ord*sizeof(Node*));
+	for(int i=0;i<mat->ord;i++) d[i]=mat->arg[i]->clean();
+	cul = mat->self(d,mat->ord);
+	delete mat;
+	
+	cl=cul->clean();
+	delete cul;
+	return cl;
+	}
+
 			//SELF
-			
+
 Node* Node :: self(Node** a,int b){return NULL;}		
 Node* Sum  :: self(Node** a,int b){return new Sum(a,b);}
 Node* Prod :: self(Node** a,int b){return new Prod(a,b);}
 Node* Pow  :: self(Node** a,int b){return new Pow(a,b);}
-Node* Minus:: self(Node** a,int b){return new Minus(a,b);}
 Node* Exp  :: self(Node** a,int b){return new Exp(a,b);}
 Node* Cos  :: self(Node** a,int b){return new Cos(a,b);}
 Node* Sin  :: self(Node** a,int b){return new Sin(a,b);}
@@ -735,8 +676,3 @@ Node** nalloc(int a){
 	if (a<1) return NULL;
 	else return (Node**)malloc(a*sizeof(Node*));
 	}
-/*
-Node* Node::omit(int){return 0;}
-Node* Node::fuse(int a){return 0;}
-Node* Node::append(Node* a){return 0;}
-*/
